@@ -565,6 +565,9 @@ String generalKeyboard(
     uint8_t longNextPress = 0;
     uint8_t longPrevPress = 0;
     unsigned long LongPressTmp = millis();
+    unsigned long pending_next_at = 0;
+    bool pending_next = false;
+    constexpr unsigned long kDoubleTapWindowMs = 275;
 
     // main loop
     while (1) {
@@ -1047,12 +1050,7 @@ String generalKeyboard(
                 }
             }
 #elif defined(HAS_1_BUTTON)
-            if (check(SelPress)) {
-                selection_made = true;
-            } else if (check(EscPress)) {
-                current_text = "\x1B"; // ASCII ESC CHARACTER
-                break;
-            } else if (check(NextPress)) {
+            auto moveKeyboardCursorNext = [&]() {
                 if (y < 0) {
                     x++;
                     if (x >= buttons_number) {
@@ -1086,6 +1084,70 @@ String generalKeyboard(
                     }
                 }
                 redraw = true;
+            };
+
+            auto moveKeyboardCursorPrev = [&]() {
+                if (y < 0) {
+                    x--;
+                    if (x < 0) {
+                        y = KeyboardHeight - 1;
+                        x = KeyboardWidth - 1;
+                        while (y >= 0 && keys[y][x][caps] == '\0') {
+                            x--;
+                            if (x < 0) {
+                                x = KeyboardWidth - 1;
+                                y--;
+                            }
+                        }
+                        if (y < 0) {
+                            y = -1;
+                            x = buttons_number - 1;
+                        }
+                    }
+                } else {
+                    int prevX = x;
+                    int prevY = y;
+                    do {
+                        prevX--;
+                        if (prevX < 0) {
+                            prevY--;
+                            if (prevY < 0) {
+                                prevY = -1;
+                                prevX = buttons_number - 1;
+                                break;
+                            }
+                            prevX = KeyboardWidth - 1;
+                        }
+                    } while (prevY >= 0 && keys[prevY][prevX][caps] == '\0');
+
+                    x = prevX;
+                    y = prevY;
+                }
+                redraw = true;
+            };
+
+            if (pending_next && millis() - pending_next_at > kDoubleTapWindowMs) {
+                pending_next = false;
+                moveKeyboardCursorNext();
+                last_input_time = millis();
+            }
+
+            if (check(SelPress)) {
+                pending_next = false;
+                selection_made = true;
+            } else if (check(EscPress)) {
+                pending_next = false;
+                current_text = "\x1B"; // ASCII ESC CHARACTER
+                break;
+            } else if (check(NextPress)) {
+                if (pending_next && millis() - pending_next_at <= kDoubleTapWindowMs) {
+                    pending_next = false;
+                    moveKeyboardCursorPrev();
+                    last_input_time = millis();
+                } else {
+                    pending_next = true;
+                    pending_next_at = millis();
+                }
             }
 #elif defined(HAS_KEYBOARD)  // Cardputer, T-Deck and T-LoRa-Pager
             if (KeyStroke.pressed) {
