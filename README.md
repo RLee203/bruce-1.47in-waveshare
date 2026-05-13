@@ -16,10 +16,5 @@ Use the command below and replace the serial port for your system:
 esptool.py --port COMx write_flash 0x00000 firmware/Bruce-waveshare-esp32-s3-lcd-147.bin
 ```
 
-## Release workflow
-- Tag-based release uploads are handled by GitHub Actions.
-- Create a tag like `v1.0.0` and push it to upload files from `firmware/` to a release.
-
 ## Notes
-- Source code/build system has been removed from this repo intentionally.
 - This repo is intended for distributing multiple custom firmware variants for this single device.
