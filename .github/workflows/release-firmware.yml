@@ -1,0 +1,33 @@
+name: Release Waveshare Firmware
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure firmware exists
+        run: |
+          ls -la firmware
+          test -n "$(find firmware -maxdepth 1 -type f -name '*.bin' -o -name '*.uf2' -o -name '*.zip')"
+
+      - name: Create GitHub Release and upload firmware
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Waveshare 1.47in Firmware ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            firmware/*.bin
+            firmware/*.uf2
+            firmware/*.zip
